@@ -1,0 +1,5 @@
+lcz Arms FLF FRE
+lcz Heart LFF
+lcz Line RL RR
+lcz Loop LFLE LFRF LFRL LRR
+lcz Ring RFL RFR LFRE LFLF
