@@ -1,0 +1,1 @@
+Error handling - don't just crash if files have been moved elsewhere

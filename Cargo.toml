@@ -1,6 +1,6 @@
 [package]
 name = "scpmapper"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["grufkork <griffin.hiscoke@me.com>"]
 edition = "2018"
 

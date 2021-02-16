@@ -1,5 +1,15 @@
-Branch entrance branch_ez
 Arms light arms_lz
-Heart light heart_lz
 Loop light loop_lz
+Heart light heart_lz
 Ring light ring_lz
+Line light line_lz
+Bonbon heavy bonbon_hz
+Line heavy line_hz
+Rectangle heavy rectangle_hz
+Turtle heavy turtle_hz
+Window heavy window_hz
+Branch entrance branch_ez
+Cross entrance cross_ez
+Grid entrance grid_ez
+Line entrance line_ez
+Pipe entrance pipe_ez

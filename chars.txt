@@ -1,6 +1,19 @@
-│─
-┌┐┘└
-┼
-┴├┬┤
-╵╶╷╴
-╹╺╻╸
+╵ up
+╹ up
+╶ right
+╺ right
+╷ down
+╻ down
+╴ left
+╸ left
+│ up down
+─ left right
+┌ down right
+┐ left down
+┘ up left
+└ up right
+┼ up down left right
+┴ up right left
+├ up right down
+┬ right down left
+┤ up down left

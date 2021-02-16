@@ -19,3 +19,7 @@ If I feel like working on it I'll see if I can make it  find the layout and play
 
 Also, make no remarks about the architecture/general programming, it's not clean, particularly extensible or efficient but it works :D. Rust is fast and the task it is doing is minimal. Though if you still feel very strongly about, do please refactor my code.
 There's also lots of dead/commmented code and assets, might clean up sometime...
+
+### Credits
+Credit to downloadpizza for the layouts as text files, here:
+https://github.com/downloadpizza/scp-sl-layouts
