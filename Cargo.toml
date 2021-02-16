@@ -1,6 +1,6 @@
 [package]
 name = "scpmapper"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["grufkork <griffin.hiscoke@me.com>"]
 edition = "2018"
 
@@ -8,3 +8,6 @@ edition = "2018"
 
 [dependencies]
 inputbot = "0.5.0"
+
+[target.'cfg(windows)'.dependencies]
+winapi-util = "0.1.5"

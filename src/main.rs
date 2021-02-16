@@ -28,7 +28,8 @@ struct Layout{
 }
 
 fn main() {
-    println!("scpmapper v1.0.0");
+    enable_virtual_terminal_processing();
+    println!("scpmapper v1.0.1");
 
     let loop_time = Duration::from_millis(33);
 
@@ -353,5 +354,17 @@ fn zone_to_string(zone: Zone) -> String{
         Zone::Entrance => "entrance".to_string(),
         Zone::Light => "light".to_string(),
         Zone::Heavy => "heavy".to_string()
+    }
+}
+
+#[cfg(windows)]
+pub fn enable_virtual_terminal_processing() {
+    use winapi_util::console::Console;
+
+    if let Ok(mut term) = Console::stdout() {
+        let _ = term.set_virtual_terminal_processing(true);
+    }
+    if let Ok(mut term) = Console::stderr() {
+        let _ = term.set_virtual_terminal_processing(true);
     }
 }
