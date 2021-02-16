@@ -4,14 +4,6 @@ use std::time::Duration;
 use std::fs::read_to_string;
 
 
-use std::env::current_dir;
-
-enum Turn{
-    Forward,
-    Right,
-    Left
-}
-
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum Direction{
     Up,
@@ -35,20 +27,11 @@ struct Layout{
     zone: String
 }
 
-
-struct Map{
-    zone: String,
-    name: String
-}
-
 fn main() {
-    println!("scpmapper v0.2.0");
-    let dir = current_dir().unwrap();
-    let dir = dir.as_path().to_str().unwrap();
+    println!("scpmapper v1.0.0");
 
     let loop_time = Duration::from_millis(33);
 
-    let mut dirs: Vec<Turn> = vec![];
 
     let layout_meta = read_to_string("layouts.txt").unwrap();
     let layout_meta = layout_meta.split("\r\n").map(|row| {
@@ -57,10 +40,8 @@ fn main() {
 
     let mut layouts = layout_meta.iter().map(|map| {
         let path = format!("scp-sl-layouts/{}/{}.txt", map[1], map[2]);
-        //println!("{}",  path);
         Layout{
             map: {
-                //println!("{}", path);
                 let file = read_to_string(path).unwrap();
                 file.split("\r\n").map(|x| x.chars().collect()).collect::<Vec<Vec<char>>>()
             },
@@ -90,16 +71,11 @@ fn main() {
         for (y,row) in layout.map.iter().enumerate(){
             longest_row = max(longest_row, row.len());
             for (x, c) in row.iter().enumerate(){
-                //println!("{}: {}*", c, *c as i32);
                 if c != &' ' && char_to_dirs.get(c).unwrap().len() == 1{
                     layout.paths.push(((x, y), vec![char_to_dirs.get(c).unwrap()[0].clone()], false));
-                    /*if char_to_dirs.get(c).unwrap()[0].clone() == Direction::Left{
-                        println!("{}", c);
-                    }*/
                 }
             }
         }
-        //println!("count: {}, {}", layout.paths.len(), layout.name);
         for i in 0..layout.map.len(){
             let len = layout.map[i].len();
             layout.map[i].append(&mut vec![' '; longest_row - len]);
@@ -111,91 +87,55 @@ fn main() {
     loop{
         let mut all_good = true;
         let mut paths_to_extend: Vec<(usize, usize)> = vec![];
-        'check_all: for a in 0..layouts.len(){
+        'check_all: for a in 0..layouts.len(){ // Iterate through all paths
             for b in 0..layouts[a].paths.len(){
-                
-                //let path = &layouts[a].paths[b];
                 if layouts[a].paths[b].2 {continue;}
-                if layouts[a].paths[b].1.len() > 8{layouts[a].paths[b].2 = true; continue;}
-                for x in 0..layouts.len(){
+                if layouts[a].paths[b].1.len() > 10{layouts[a].paths[b].2 = true; continue;} // Max path length is 10, to stop loops
+                for x in 0..layouts.len(){ // And match them against all others
                     if layouts[x].zone != layouts[a].zone {continue;}
                     for y in 0..layouts[x].paths.len(){
                         if x == a && b == y {continue;}
-                        //println!("{}", layouts[a].paths[b].1[0]);
-                        if layouts[x].paths[y].1.iter().map(|e| direction_to_local(layouts[x].paths[y].1[0], *e)).collect::<Vec<Direction>>().iter().eq(
+                        if layouts[x].paths[y].1.iter().map(|e| direction_to_local(layouts[x].paths[y].1[0], *e)).collect::<Vec<Direction>>().iter().eq( // Rotate paths so all are pointing the same way
                             layouts[a].paths[b].1.iter().map(|e| direction_to_local(layouts[a].paths[b].1[0], *e)).collect::<Vec<Direction>>().iter()) {
                             all_good = false;
-                            paths_to_extend.push((x, y));
+                            paths_to_extend.push((x, y)); // Add equal paths to a list to expand them one step further
                         }
                     }
                 }
                 if !all_good{
                     paths_to_extend.push((a, b));
-                    //println!("Len: {}", layouts[a].paths[b].1.len());
                     break 'check_all;
                 }
-                layouts[a].paths[b].2 = true;
+                layouts[a].paths[b].2 = true; // Path is unique and finished, doesn't need to be iterated over again. This line alone sped things up at least 10x
             }
         }
-        /*println!();
-        for l in 0..1{
-            for p in 0..layouts[l].paths.len(){
-                print!("path {}: {},{}: ", p, layouts[l].paths[p].0.0, layouts[l].paths[p].0.1);
-                for dir in layouts[l].paths[p].1.iter(){
-                    print!("{}", *dir as u8);
-                }
-                println!();
-            }
-        }*/
-        if all_good{ break;}else{
-            //println!("c: {}", paths_to_extend.len());
+        
+        if all_good{ break;}else{ // If all paths are unique, all good, otherwise expand them
             for x in paths_to_extend.iter(){
-                //println!("Extending: {}", x.1);
                 if layouts[x.0].paths[x.1].2 {continue;}
                 let mut pos = layouts[x.0].paths[x.1].0;
                 let mut last_dir: Direction = Direction::Up;
-                for dir in (&layouts[x.0].paths[x.1].1).iter(){
-                    //let d = dir;
+                for dir in (&layouts[x.0].paths[x.1].1).iter(){ // Move to end of path
                     last_dir = *dir;
                     match dir{
                         Direction::Up => pos.1 -= 1,
                         Direction::Right => pos.0 += 1,
                         Direction::Down => pos.1 += 1,
-                        Direction::Left => pos.0 -= 1,
-                        _ => unreachable!()
+                        Direction::Left => pos.0 -= 1
                     }
                 }
-                if layouts[x.0].map[pos.1][pos.0] == ' '{
-                    println!("pos start: {}, {}: {}", layouts[x.0].paths[x.1].0.0, layouts[x.0].paths[x.1].0.1, layouts[x.0].map[layouts[x.0].paths[x.1].0.1][layouts[x.0].paths[x.1].0.0]);
-                    println!("AAA: {} {}", layouts[x.0].paths[x.1].0.0, pos.0);
-                    println!("Layout: {}, {}, X/Y:{}/{}", x.0, layouts[x.0].map[pos.1][pos.0], pos.0, pos.1);
-                    println!("Last dir: {}", last_dir as u8);
-                }
+                
                 let dirs = char_to_dirs.get(&layouts[x.0].map[pos.1][pos.0]).unwrap();
                 if dirs.len() == 1{
                     layouts[x.0].paths[x.1].2 = true;
-                    /*if x.0 == 0{
-                        println!("xy: {}, {}", layouts[x.0].paths[x.1].0.0, layouts[x.0].paths[x.1].0.1);
-                    }*/
-                    //println!("damn");
                 }else{
                     let mut paths_added = 0;
                     for dir in dirs.iter(){
-                        if (*dir as u8) == (last_dir as u8 + 2)%4  {continue;}
-                        //print!("A");
+                        if (*dir as u8) == (last_dir as u8 + 2)%4  {continue;} // Don't go back same way as it came from
                         if paths_added == dirs.len() - 2{
-                            layouts[x.0].paths[x.1].1.push(*dir);
-                            //println!("m");
-                            //println!("{}/{}: {}", x.0, x.1, layouts[x.0].paths[x.1].1.len());
-                            /*if layouts[x.0].paths[x.1].1.len() == 10{
-                                println!("{}..{}", layouts[x.0].paths[x.1].0.0, layouts[x.0].paths[x.1].0.1);
-                                println!("Last dir: {}", last_dir as u8);
-                                for d in layouts[x.0].paths[x.1].1.iter(){
-                                    println!("{}", *d as u8);
-                                }
-                            }*/
+                            layouts[x.0].paths[x.1].1.push(*dir); // Modify old path if no new branches are needed
                         }else{
-                            let mut path = layouts[x.0].paths[x.1].clone();
+                            let mut path = layouts[x.0].paths[x.1].clone(); // Add new paths if it branches
                             path.1.push(*dir);
                             layouts[x.0].paths.push(path);
                         }
@@ -210,33 +150,12 @@ fn main() {
     }
     println!();
 
-    // Something
-    let mut codes_to_map: HashMap<&str, Map> = HashMap::new();
-
-    let mut paths_file = read_to_string("paths.txt").unwrap();
-    for x in paths_file.split("\r\n"){
-        let data: Vec<&str> = x.split(" ").collect();
-        for path in data[2..].iter(){
-            codes_to_map.insert(*path, Map{zone: data[0].into(), name: data[1].into()});
-        }
-    }
-
-    let mut pressedLastFrame = false;
+    let mut pressed_last_frame = false;
     let mut keydown = false;
 
     let mut dirstring = "".to_string();
 
     println!("Started!");
-
-    /*for l in 0..1{
-        for p in 0..layouts[l].paths.len(){
-            print!("path {},{}: ", layouts[l].paths[p].0.0, layouts[l].paths[p].0.1);
-            for dir in layouts[l].paths[p].1.iter(){
-                print!("{}", *dir as u8);
-            }
-            println!();
-        }
-    }*/
 
     let mut zone = Zone::Entrance;
     let mut state = 0; // 0 = select zone, 1 = awaiting selection, 2 = finding zone
@@ -244,43 +163,39 @@ fn main() {
     loop{
 
         if inputbot::KeybdKey::Numpad8Key.is_pressed() || inputbot::KeybdKey::UpKey.is_pressed(){
-            if !pressedLastFrame{
-                dirs.push(Turn::Forward);
+            if !pressed_last_frame{
                 keydown = true;
                 dirstring = [dirstring, "F".into()].concat();
             }
-            pressedLastFrame = true;
+            pressed_last_frame = true;
         }else if inputbot::KeybdKey::Numpad4Key.is_pressed() || inputbot::KeybdKey::LeftKey.is_pressed(){
-            if !pressedLastFrame{
-                dirs.push(Turn::Forward);
+            if !pressed_last_frame{
                 keydown = true;
                 dirstring = [dirstring, "L".into()].concat();
             }
-            pressedLastFrame = true;
+            pressed_last_frame = true;
         }else if inputbot::KeybdKey::Numpad6Key.is_pressed() || inputbot::KeybdKey::RightKey.is_pressed(){
-            if !pressedLastFrame{
-                dirs.push(Turn::Forward);
+            if !pressed_last_frame{
                 keydown = true;
                 dirstring = [dirstring, "R".into()].concat();
             }
-            pressedLastFrame = true;
+            pressed_last_frame = true;
         }else if inputbot::KeybdKey::Numpad5Key.is_pressed() || inputbot::KeybdKey::DownKey.is_pressed(){
-            if !pressedLastFrame{
-                dirs.push(Turn::Forward);
+            if !pressed_last_frame{
                 keydown = true;
                 dirstring = [dirstring, "E".into()].concat();
             }
-            pressedLastFrame = true;
+            pressed_last_frame = true;
         }else if inputbot::KeybdKey::Numpad0Key.is_pressed() || inputbot::KeybdKey::BackspaceKey.is_pressed(){
-            if !pressedLastFrame{
+            if !pressed_last_frame{
                 if dirstring.len() > 0{
                     keydown = true;
                     dirstring = dirstring[0..dirstring.len() - 1].into();
                 }
             }
-            pressedLastFrame = true;
+            pressed_last_frame = true;
         }else{
-            pressedLastFrame = false;
+            pressed_last_frame = false;
         }
 
         
@@ -339,20 +254,11 @@ fn main() {
         
                     let mut matching_layouts: Vec<(usize, usize)> = vec![];
         
-                    //let mut longer_match_exists = false;
         
         
                     for x in 0..layouts.len(){
                         if layouts[x].zone != zone_to_string(zone) {continue;}
                         for y in 0..layouts[x].paths.len(){
-                            if x == 0 && y == 0{
-                                /*for d in layouts[x].paths[y].1.iter().map(|e| direction_to_local(layouts[x].paths[y].1[0], *e)){
-                                    println!("p {}", d as u8);
-                                    
-                                }for dir in directions.iter(){
-                                    println!("{}", *dir as u8);
-                                }*/
-                            }
                             if layouts[x].paths[y].1.len() >= directions.len() && layouts[x].paths[y].1[0..directions.len()].iter().map(|e| direction_to_local(layouts[x].paths[y].1[0], *e)).collect::<Vec<Direction>>().iter().eq(&directions) {
                                 matching_layouts.push((x, y));
                             }
@@ -387,16 +293,13 @@ fn main() {
                                 Direction::Up => pos.1 -= 1,
                                 Direction::Right => pos.0 += 1,
                                 Direction::Down => pos.1 += 1,
-                                Direction::Left => pos.0 -= 1,
-                                _ => unreachable!()
+                                Direction::Left => pos.0 -= 1
                             }
                         }
         
                         println!("Map: {}", layouts[matching_layouts[0].0].name);
-                        /*for dir in directions.iter(){
-                            println!("{}", *dir as u8);
-                        }*/
-                        for y in 0..layouts[matching_layouts[0].0].map.len(){
+                        
+                        for y in 0..layouts[matching_layouts[0].0].map.len(){ // Draw map
                             for x in 0..layouts[matching_layouts[0].0].map[y].len(){
                                 let mut stylepre = "";
                                 let mut stylepost = "";
@@ -422,29 +325,6 @@ fn main() {
                         dirstring = "".to_string();
                         state = 0;
                     }
-        
-                    /*if codes_to_map.contains_key(&*dirstring){
-                        let map = codes_to_map.get(&*dirstring).unwrap();
-                        println!("Found map: {}", map.name);
-                        dirstring = "".to_string();
-                        //println!("{}", format!("\"C:\\ProgramFiles\\Windows Photo Viewer\\PhotoViewer.dll\", ImageView_Fullscreen {}\\{}\\{}.png", dir, map.zone, map.name));
-                        /*Command::new("rundll32")
-                        //.arg("\"C:\\ProgramFiles\\Windows Photo Viewer\\PhotoViewer.dll\",")
-                        //.arg("ImageView_Fullscreen")
-                        //.arg(format!("{}\\{}.png", map.zone, map.name))
-                        //.arg("/C")
-                        //.arg(format!("C:\\Windows\\System32\\rundll32.exe \"C:\\ProgramFiles\\Windows\\ Photo Viewer\\PhotoViewer.dll\", ImageView_Fullscreen {}\\{}\\{}.png", dir, map.zone, map.name))
-                        .arg("\"C:\\Program Files\\Windows Photo Viewer\\PhotoViewer.dll\"")
-                        .arg("\"E:\\pics\\pog.png\"")
-                        .status().unwrap();*/
-                        Command::new("cmd")
-                        .arg("/C")
-                        //.arg(format!("explorer"))
-                        .arg(format!("explorer {}\\mapimgs\\{}\\{}.png", dir, map.zone, map.name))
-                        .status().unwrap();
-        
-                        //println!("{}", format!("explorer {}\\mapimgs\\{}\\{}.png", dir, map.zone, map.name));
-                    }*/
         
                     
         
